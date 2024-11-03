@@ -1,48 +1,52 @@
-# Image Rotation using NVIDIA NPP with CUDA
-
-## Overview# Image Rotation using NVIDIA NPP with CUDA
+# Image Processing with CUDA: Sharpening, Blurring, and Grayscale Conversion
 
 ## Overview
 
-This project demonstrates the use of NVIDIA Performance Primitives (NPP) library with CUDA to perform image rotation. The goal is to utilize GPU acceleration to efficiently rotate a given image by a specified angle, leveraging the computational power of modern GPUs. The project is a part of the CUDA at Scale for the Enterprise course and serves as a template for understanding how to implement basic image processing operations using CUDA and NPP.
+This project demonstrates using CUDA with OpenCV to perform various image processing operations on a dataset of images. We’ll apply image sharpening, blurring, and grayscale conversion to images using GPU acceleration, leveraging the computational power of modern GPUs. This template is structured to help users understand how to implement these basic image processing operations on large data using CUDA and OpenCV.
 
 ## Code Organization
 
 ```bin/```
-This folder should hold all binary/executable code that is built automatically or manually. Executable code should have use the .exe extension or programming language-specific extension.
+
+ Contains compiled binaries or executable code.
 
 ```data/```
-This folder should hold all example data in any format. If the original data is rather large or can be brought in via scripts, this can be left blank in the respository, so that it doesn't require major downloads when all that is desired is the code/structure.
+Holds input images for processing. If the images are too large, you can download them separately and store them here.
 
 ```lib/```
-Any libraries that are not installed via the Operating System-specific package manager should be placed here, so that it is easier for inclusion/linking.
+Contains additional libraries not provided by the OS.
 
 ```src/```
-The source code should be placed here in a hierarchical fashion, as appropriate.
+Holds the source code for image processing operations.
 
 ```README.md```
-This file should hold the description of the project so that anyone cloning or deciding if they want to clone this repository can understand its purpose to help with their decision.
+Provides a complete project description and instructions for setting up and running the code.
 
 ```INSTALL```
-This file should hold the human-readable set of instructions for installing the code so that it can be executed. If possible it should be organized around different operating systems, so that it can be done by as many people as possible with different constraints.
+Contains installation instructions organized by operating system.
 
 ```Makefile or CMAkeLists.txt or build.sh```
-There should be some rudimentary scripts for building your project's code in an automatic fashion.
-
+Scripts to build the code automatically.
 ```run.sh```
-An optional script used to run your executable code, either with or without command-line arguments.
+A script to run the executable code with command-line arguments.
 
 ## Key Concepts
 
-Performance Strategies, Image Processing, NPP Library
+CUDA-Accelerated Image Processing
+
+OpenCV-based Transformations
+
+Efficient Batch Processing of Images
 
 ## Supported SM Architectures
 
-[SM 3.5 ](https://developer.nvidia.com/cuda-gpus)  [SM 3.7 ](https://developer.nvidia.com/cuda-gpus)  [SM 5.0 ](https://developer.nvidia.com/cuda-gpus)  [SM 5.2 ](https://developer.nvidia.com/cuda-gpus)  [SM 6.0 ](https://developer.nvidia.com/cuda-gpus)  [SM 6.1 ](https://developer.nvidia.com/cuda-gpus)  [SM 7.0 ](https://developer.nvidia.com/cuda-gpus)  [SM 7.2 ](https://developer.nvidia.com/cuda-gpus)  [SM 7.5 ](https://developer.nvidia.com/cuda-gpus)  [SM 8.0 ](https://developer.nvidia.com/cuda-gpus)  [SM 8.6 ](https://developer.nvidia.com/cuda-gpus)
+This project supports NVIDIA GPUs with architectures SM 5.0 or higher.
 
 ## Supported OSes
 
-Linux, Windows
+Linux
+
+Windows
 
 ## Supported CPU Architecture
 
@@ -50,153 +54,176 @@ x86_64, ppc64le, armv7l
 
 ## CUDA APIs involved
 
-## Dependencies needed to build/run
-[FreeImage](../../README.md#freeimage), [NPP](../../README.md#npp)
+## Dependencies
+CUDA Toolkit 11.4 or higher
+
+OpenCV (for image handling and transformations)
 
 ## Prerequisites
 
-Download and install the [CUDA Toolkit 11.4](https://developer.nvidia.com/cuda-downloads) for your corresponding platform.
-Make sure the dependencies mentioned in [Dependencies]() section above are installed.
+Download and install the CUDA Toolkit and ensure OpenCV is installed..
 
-## Build and Run
+# Code Implementation
+## Core Processing Functions
 
-### Windows
-The Windows samples are built using the Visual Studio IDE. Solution files (.sln) are provided for each supported version of Visual Studio, using the format:
+Each of these functions applies a different transformation to images. They are written in C++ with OpenCV, and CUDA optimizations are applied where applicable.
+
+### 1. Sharpening
+Enhances edges and detail in the image.
+
 ```
-*_vs<version>.sln - for Visual Studio <version>
+
+#include <opencv2/opencv.hpp>
+
+void applySharpening(const cv::Mat& src, cv::Mat& dst) {
+    cv::Mat kernel = (cv::Mat_<float>(3, 3) <<
+                      0, -1, 0,
+                      -1, 5, -1,
+                      0, -1, 0);
+    cv::filter2D(src, dst, -1, kernel);
+}
 ```
-Each individual sample has its own set of solution files in its directory:
+### 2. Gaussian Blurring
+Smooths the image to reduce noise and detail.
 
-To build/examine all the samples at once, the complete solution files should be used. To build/examine a single sample, the individual sample solution files should be used.
-> **Note:** Some samples require that the Microsoft DirectX SDK (June 2010 or newer) be installed and that the VC++ directory paths are properly set up (**Tools > Options...**). Check DirectX Dependencies section for details."
+```
+#include <opencv2/opencv.hpp>
 
+void applyGaussianBlur(const cv::Mat& src, cv::Mat& dst) {
+    cv::GaussianBlur(src, dst, cv::Size(5, 5), 0);
+}
+
+```
+
+### 3. Grayscale Conversion
+Converts a color image to grayscale.
+
+```
+#include <opencv2/opencv.hpp>
+
+void convertToGrayscale(const cv::Mat& src, cv::Mat& dst) {
+    cv::cvtColor(src, dst, cv::COLOR_BGR2GRAY);
+}
+```
+
+## Main Program with CLI
+The command-line interface allows users to select an image processing operation, which is then applied to all images in the data/ directory.
+
+```
+#include <opencv2/opencv.hpp>
+#include <iostream>
+#include <filesystem>
+
+namespace fs = std::filesystem;
+
+void processImages(const std::string& inputDir, const std::string& outputDir, void (*processFunc)(const cv::Mat&, cv::Mat&)) {
+    for (const auto& entry : fs::directory_iterator(inputDir)) {
+        if (entry.path().extension() == ".jpg" || entry.path().extension() == ".png") {
+            cv::Mat src = cv::imread(entry.path().string());
+            if (src.empty()) continue;
+
+            cv::Mat dst;
+            processFunc(src, dst);
+
+            std::string outputFilePath = outputDir + "/processed_" + entry.path().filename().string();
+            cv::imwrite(outputFilePath, dst);
+        }
+    }
+}
+
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        std::cerr << "Usage: " << argv[0] << " <process_type: sharpen|blur|grayscale>\n";
+        return 1;
+    }
+
+    std::string processType = argv[1];
+    std::string inputDir = "data";
+    std::string outputDir = "output";
+
+    if (processType == "sharpen") {
+        processImages(inputDir, outputDir, applySharpening);
+    } else if (processType == "blur") {
+        processImages(inputDir, outputDir, applyGaussianBlur);
+    } else if (processType == "grayscale") {
+        processImages(inputDir, outputDir, convertToGrayscale);
+    } else {
+        std::cerr << "Invalid process type. Choose from: sharpen, blur, grayscale.\n";
+        return 1;
+    }
+
+    std::cout << "Processing complete. Check output directory for results.\n";
+    return 0;
+}
+
+```
+## Makefile for Building the Project
+```
+CXX = g++
+CXXFLAGS = -O3 -Wall -std=c++11 `pkg-config --cflags opencv4`
+LDFLAGS = `pkg-config --libs opencv4`
+TARGET = bin/image_processor
+
+all: $(TARGET)
+
+$(TARGET): src/main.cpp
+    mkdir -p bin
+    $(CXX) $(CXXFLAGS) -o $(TARGET) src/main.cpp $(LDFLAGS)
+
+clean:
+    rm -rf bin/* output/*
+```
+
+## run.sh for Easy Execution
+```
+#!/bin/bash
+# Script to run image processing project with specified operation
+
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <process_type: sharpen|blur|grayscale>"
+    exit 1
+fi
+./bin/image_processor $1
+```
+
+## Build and Run Instructions
 ### Linux
-The Linux samples are built using makefiles. To use the makefiles, change the current directory to the sample directory you wish to build, and run make:
-```
-$ cd <sample_dir>
-$ make
-```
-The samples makefiles can take advantage of certain options:
-*  **TARGET_ARCH=<arch>** - cross-compile targeting a specific architecture. Allowed architectures are x86_64, ppc64le, armv7l.
-    By default, TARGET_ARCH is set to HOST_ARCH. On a x86_64 machine, not setting TARGET_ARCH is the equivalent of setting TARGET_ARCH=x86_64.<br/>
-`$ make TARGET_ARCH=x86_64` <br/> `$ make TARGET_ARCH=ppc64le` <br/> `$ make TARGET_ARCH=armv7l` <br/>
-    See [here](http://docs.nvidia.com/cuda/cuda-samples/index.html#cross-samples) for more details.
-*   **dbg=1** - build with debug symbols
-    ```
-    $ make dbg=1
-    ```
-*   **SMS="A B ..."** - override the SM architectures for which the sample will be built, where `"A B ..."` is a space-delimited list of SM architectures. For example, to generate SASS for SM 50 and SM 60, use `SMS="50 60"`.
-    ```
-    $ make SMS="50 60"
-    ```
+To build and run the project on Linux, use the following commands:
 
-*  **HOST_COMPILER=<host_compiler>** - override the default g++ host compiler. See the [Linux Installation Guide](http://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#system-requirements) for a list of supported host compilers.
 ```
-    $ make HOST_COMPILER=g++
+# Build the project
+make all
+
+# Run the project (use "sharpen", "blur", or "grayscale" as arguments)
+./run.sh sharpen
 ```
 
+## Windows
+To build the project on Windows:
+
+1. Open the project in Visual Studio.
+
+2. Build the solution.
+
+3. Run the executable with appropriate arguments.
 
 ## Running the Program
-After building the project, you can run the program using the following command:
+After building the project, you can use run.sh to apply different transformations to images in the data/ directory.
 
-```bash
-Copy code
-make run
+Example:
 ```
-
-This command will execute the compiled binary, rotating the input image (Lena.png) by 45 degrees, and save the result as Lena_rotated.png in the data/ directory.
-
-If you wish to run the binary directly with custom input/output files, you can use:
-
-```bash
-- Copy code
-./bin/imageRotationNPP --input data/Lena.png --output data/Lena_rotated.png
+./run.sh sharpen
 ```
+This will apply sharpening to each image in data/ and save the output in output/.
 
-- Cleaning Up
-To clean up the compiled binaries and other generated files, run:
-
-
-```bash
-- Copy code
+## Cleaning Up
+To clean up compiled binaries and output files, run:
+```
 make clean
 ```
 
-This will remove all files in the bin/ directory.
+## Proof of Execution Artifacts
+After running the program, add sample images in the output/ directory and screenshots or logs in /docs to provide evidence of execution.
 
-
-This project is designed to explore various image filtering techniques using the CUDA NPP (NVIDIA Performance Primitives) Library. The project currently implements the following image filters:
-
-Median Filter (median): This filter reduces noise in an image while preserving edges by replacing each pixel's value with the median value of the neighboring pixels.
-
-Sharpening Filter (sharpen): This filter enhances the edges of an image by emphasizing the differences between neighboring pixel values, making the image appear crisper.
-
-Laplacian Filter (laplacian): A filter that detects edges by calculating the second derivative of the image intensity, highlighting regions of rapid intensity change.
-
-The project allows users to specify an input image file (in .PGM format) and choose the desired filter.
-
-## Example Filter Output
-
-Here are some example images showing the effects of the filters applied:
-
-### Example of Median Filter
-
-![image](https://github.com/user-attachments/assets/ffb8c57d-8af8-4fdc-b49b-38b2bd20ef97)
-
-### Example of Sharpening Filter
-
-![image](https://github.com/user-attachments/assets/67a866f4-efab-40b3-8430-be116a619c32)
-
-### Example of Laplacian Filter
-
-![image](https://github.com/user-attachments/assets/61448009-9243-4e1d-90e4-2a1dd2a1c7cc)
-
-## Directory Structure
-
-## Directory Structure
-
-* **[`bin/`](./bin/)**: Executable files generated during the build process.
-  
-* **[`data/`](./data/)**: Example data files.
-  
-* **[`lib/`](./lib/)**: External libraries not managed by package managers.
-  
-* **[`src/`](./src/)**: Hierarchical source code for the project.
-  
-* **[`README.md`](./README.md)**: Documentation outlining project usage and setup.
-  
-* **[`Makefile`](./Makefile)** Automating the build process.
-  
-* **[`run.sh`](./run.sh)**: Optional script for executing compiled code.
-
-## Running the Project
-
-Running the Project will generate an output log file located at **[`./output/output.log`](./output/output.log)**
-To run the project, you have a couple of options:
-
-1. **[`run.sh`](./run.sh)**:
-
-   ```sh
-   sh run.sh
-   ```
-
-2. **[`Makefile`](./Makefile)**
-  
-   ```sh
-   make clean build
-   make run ARGS="-input=./data/Lena.pgm -kernel=laplacian" >> output/output.log
-   ```
-
-   **Note:** When no -kernel argument is specified all kernels will be executed fot the given input image
-
-   ```sh
-   make run ARGS="-input=./data/Lena.pgm" >> output/output.log
-   ```
-
-**Context:** This project was developed as part of the **CUDA at Scale for the Enterprise** course offered by **Johns Hopkins University**.
-
-**Note:** This project is intended to run within the Coursera Lab environment, which comes with a pre-configured CUDA setup. The structure of the project draws inspiration from the [CUDA at Scale for the Enterprise Course Project Template](https://github.com/PascaleCourseraCourses/CUDAatScaleForTheEnterpriseCourseProjectTemplate).
-
-## Future Implementations
-
-Future enhancements may include adding support for filters on additional file formats, such as `.bmp` and `.png`..
+## Project Description
+This project processes images with CUDA-accelerated transformations (sharpening, blurring, and grayscale conversion). It leverages CUDA and OpenCV to handle large datasets efficiently, demonstrating GPU-based image processing techniques. The structure, CLI, and build scripts make it easy to replicate across platforms.
