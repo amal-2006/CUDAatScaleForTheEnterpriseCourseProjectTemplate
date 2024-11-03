@@ -7,7 +7,6 @@ This project demonstrates using CUDA with OpenCV to perform various image proces
 ## Code Organization
 
 ```bin/```
-
  Contains compiled binaries or executable code.
 
 ```data/```
