@@ -1,228 +1,79 @@
-# Image Processing with CUDA: Sharpening, Blurring, and Grayscale Conversion
+# Canny Edge Detection with CUDA
 
 ## Overview
-
-This project demonstrates using CUDA with OpenCV to perform various image processing operations on a dataset of images. We’ll apply image sharpening, blurring, and grayscale conversion to images using GPU acceleration, leveraging the computational power of modern GPUs. This template is structured to help users understand how to implement these basic image processing operations on large data using CUDA and OpenCV.
+This project implements a Canny edge detection algorithm using CUDA to leverage the parallel processing capabilities of GPUs. The application reads grayscale images from a specified input directory, processes them using a CUDA kernel, and outputs the results to a specified output directory. This implementation aims to enhance the performance of edge detection tasks, particularly for large image datasets.
 
 ## Code Organization
+- **bin/**: This folder holds all binary/executable code that is built automatically or manually. Executable code should use the `.exe` extension or a programming language-specific extension.
+  
+- **data/**: This folder holds example data in any format. If the original data is large or can be brought in via scripts, this can be left blank in the repository to avoid major downloads when only the code/structure is desired.
 
-```bin/```
- Contains compiled binaries or executable code.
+- **src/**: The source code is placed here in a hierarchical fashion, as appropriate.
 
-```data/```
-Holds input images for processing. If the images are too large, you can download them separately and store them here.
+- **README.md**: This file holds the description of the project so that anyone cloning or deciding if they want to clone this repository can understand its purpose to help with their decision.
 
-```lib/```
-Contains additional libraries not provided by the OS.
+- **Makefile**: This file provides instructions for building the project's code automatically.
 
-```src/```
-Holds the source code for image processing operations.
-
-```README.md```
-Provides a complete project description and instructions for setting up and running the code.
-
-```INSTALL```
-Contains installation instructions organized by operating system.
-
-```Makefile or CMAkeLists.txt or build.sh```
-Scripts to build the code automatically.
-```run.sh```
-A script to run the executable code with command-line arguments.
+- **run.sh**: An optional script used to run your executable code, either with or without command-line arguments.
 
 ## Key Concepts
+- CUDA Programming
+- Image Processing
+- Edge Detection Algorithms
+- Memory Management in CUDA
 
-CUDA-Accelerated Image Processing
-
-OpenCV-based Transformations
-
-Efficient Batch Processing of Images
-
-## Supported SM Architectures
-
-This project supports NVIDIA GPUs with architectures SM 5.0 or higher.
-
-## Supported OSes
-
-Linux
-
-Windows
+## Supported OS
+- Linux
+- Windows (with appropriate modifications)
 
 ## Supported CPU Architecture
+- x86_64
 
-x86_64, ppc64le, armv7l
+## CUDA APIs Involved
+- `cudaMalloc()`
+- `cudaMemcpy()`
+- `cudaFree()`
+- `cudaEventCreate()`
+- `cudaEventRecord()`
+- `cudaEventSynchronize()`
+- `cudaEventElapsedTime()`
 
-## CUDA APIs involved
-
-## Dependencies
-CUDA Toolkit 11.4 or higher
-
-OpenCV (for image handling and transformations)
+## Dependencies Needed to Build/Run
+- CUDA Toolkit
+- OpenCV (version 4 or later)
 
 ## Prerequisites
+- Install the CUDA Toolkit on your machine. Ensure that your GPU is compatible with CUDA.
+- Install OpenCV using the appropriate package manager for your operating system. 
 
-Download and install the CUDA Toolkit and ensure OpenCV is installed..
+## Build and Run
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd <repository-directory>
+   ```
 
-# Code Implementation
-## Core Processing Functions
+2. Install the required dependencies:
+   - For OpenCV, you can use:
+     ```bash
+     sudo apt-get install libopencv-dev  # For Debian/Ubuntu
+     ```
 
-Each of these functions applies a different transformation to images. They are written in C++ with OpenCV, and CUDA optimizations are applied where applicable.
+3. Build the project:
+   ```bash
+   make all
+   ```
 
-### 1. Sharpening
-Enhances edges and detail in the image.
+4. Run the application:
+   ```bash
+   ./run.sh
+   ```
 
-```
+5. The processed images will be stored in the `output/` directory.
 
-#include <opencv2/opencv.hpp>
+## Sample Output
 
-void applySharpening(const cv::Mat& src, cv::Mat& dst) {
-    cv::Mat kernel = (cv::Mat_<float>(3, 3) <<
-                      0, -1, 0,
-                      -1, 5, -1,
-                      0, -1, 0);
-    cv::filter2D(src, dst, -1, kernel);
-}
-```
-### 2. Gaussian Blurring
-Smooths the image to reduce noise and detail.
-
-```
-#include <opencv2/opencv.hpp>
-
-void applyGaussianBlur(const cv::Mat& src, cv::Mat& dst) {
-    cv::GaussianBlur(src, dst, cv::Size(5, 5), 0);
-}
-
-```
-
-### 3. Grayscale Conversion
-Converts a color image to grayscale.
-
-```
-#include <opencv2/opencv.hpp>
-
-void convertToGrayscale(const cv::Mat& src, cv::Mat& dst) {
-    cv::cvtColor(src, dst, cv::COLOR_BGR2GRAY);
-}
-```
-
-## Main Program with CLI
-The command-line interface allows users to select an image processing operation, which is then applied to all images in the data/ directory.
-
-```
-#include <opencv2/opencv.hpp>
-#include <iostream>
-#include <filesystem>
-
-namespace fs = std::filesystem;
-
-void processImages(const std::string& inputDir, const std::string& outputDir, void (*processFunc)(const cv::Mat&, cv::Mat&)) {
-    for (const auto& entry : fs::directory_iterator(inputDir)) {
-        if (entry.path().extension() == ".jpg" || entry.path().extension() == ".png") {
-            cv::Mat src = cv::imread(entry.path().string());
-            if (src.empty()) continue;
-
-            cv::Mat dst;
-            processFunc(src, dst);
-
-            std::string outputFilePath = outputDir + "/processed_" + entry.path().filename().string();
-            cv::imwrite(outputFilePath, dst);
-        }
-    }
-}
-
-int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <process_type: sharpen|blur|grayscale>\n";
-        return 1;
-    }
-
-    std::string processType = argv[1];
-    std::string inputDir = "data";
-    std::string outputDir = "output";
-
-    if (processType == "sharpen") {
-        processImages(inputDir, outputDir, applySharpening);
-    } else if (processType == "blur") {
-        processImages(inputDir, outputDir, applyGaussianBlur);
-    } else if (processType == "grayscale") {
-        processImages(inputDir, outputDir, convertToGrayscale);
-    } else {
-        std::cerr << "Invalid process type. Choose from: sharpen, blur, grayscale.\n";
-        return 1;
-    }
-
-    std::cout << "Processing complete. Check output directory for results.\n";
-    return 0;
-}
-
-```
-## Makefile for Building the Project
-```
-CXX = g++
-CXXFLAGS = -O3 -Wall -std=c++11 `pkg-config --cflags opencv4`
-LDFLAGS = `pkg-config --libs opencv4`
-TARGET = bin/image_processor
-
-all: $(TARGET)
-
-$(TARGET): src/main.cpp
-    mkdir -p bin
-    $(CXX) $(CXXFLAGS) -o $(TARGET) src/main.cpp $(LDFLAGS)
-
-clean:
-    rm -rf bin/* output/*
-```
-
-## run.sh for Easy Execution
-```
-#!/bin/bash
-# Script to run image processing project with specified operation
-
-if [ "$#" -ne 1 ]; then
-    echo "Usage: $0 <process_type: sharpen|blur|grayscale>"
-    exit 1
-fi
-./bin/image_processor $1
-```
-
-## Build and Run Instructions
-### Linux
-To build and run the project on Linux, use the following commands:
-
-```
-# Build the project
-make all
-
-# Run the project (use "sharpen", "blur", or "grayscale" as arguments)
-./run.sh sharpen
-```
-
-## Windows
-To build the project on Windows:
-
-1. Open the project in Visual Studio.
-
-2. Build the solution.
-
-3. Run the executable with appropriate arguments.
-
-## Running the Program
-After building the project, you can use run.sh to apply different transformations to images in the data/ directory.
-
-Example:
-```
-./run.sh sharpen
-```
-This will apply sharpening to each image in data/ and save the output in output/.
-
-## Cleaning Up
-To clean up compiled binaries and output files, run:
-```
-make clean
-```
-
-## Proof of Execution Artifacts
-After running the program, add sample images in the output/ directory and screenshots or logs in /docs to provide evidence of execution.
-
-## Project Description
-This project processes images with CUDA-accelerated transformations (sharpening, blurring, and grayscale conversion). It leverages CUDA and OpenCV to handle large datasets efficiently, demonstrating GPU-based image processing techniques. The structure, CLI, and build scripts make it easy to replicate across platforms.
+|Input|Output|
+|:-:|:-:|
+|![image4885](https://github.com/user-attachments/assets/5f01939e-a07a-4b5d-ba97-5dad20abc952) |![canny_edges_7](https://github.com/user-attachments/assets/98a54f9d-528b-41bd-ad14-73a717963e16) |
+|![image4944](https://github.com/user-attachments/assets/12a7beb7-b870-49f1-b3b6-cf78e7df16a5) |![canny_edges_45](https://github.com/user-attachments/assets/79d0a0e8-f540-4cf0-a62a-c886f3266887) |
